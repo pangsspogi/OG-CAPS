@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1800 1100" role="img" aria-label="Abstract monochrome OG CAPS campaign poster">
+  <defs>
+    <linearGradient id="wall" x2="0" y2="1"><stop stop-color="#777568"/><stop offset=".57" stop-color="#46453f"/><stop offset="1" stop-color="#252522"/></linearGradient>
+    <radialGradient id="light" cx=".73" cy=".25" r=".7"><stop stop-color="#d1cbb8" stop-opacity=".72"/><stop offset="1" stop-color="#d1cbb8" stop-opacity="0"/></radialGradient>
+    <linearGradient id="cap" x2=".6" y2="1"><stop stop-color="#46473f"/><stop offset=".55" stop-color="#20211f"/><stop offset="1" stop-color="#111210"/></linearGradient>
+    <filter id="grain"><feTurbulence type="fractalNoise" baseFrequency=".8" numOctaves="2" stitchTiles="stitch"/><feColorMatrix values="1 0 0 0 0 0 1 0 0 0 0 0 1 0 0 0 0 0 .1 0"/></filter>
+  </defs>
+  <path fill="url(#wall)" d="M0 0h1800v1100H0z"/>
+  <path fill="url(#light)" d="M0 0h1800v1100H0z"/>
+  <path fill="#171815" opacity=".4" d="M0 850h1800v250H0z"/>
+  <ellipse cx="1110" cy="816" rx="470" ry="90" fill="#111" opacity=".35"/>
+  <path d="M544 634c41-205 266-340 534-292 135 24 251 116 289 248l-99 162-757-7z" fill="url(#cap)"/>
+  <path d="M541 741c142-53 430-38 703 19 129 27 218 69 214 111-7 68-251 81-503 41-237-38-394-102-414-140-8-15-6-23 0-31z" fill="#191a17"/>
+  <path d="M840 515c90-54 190-57 286-20" fill="none" stroke="#aaa58e" stroke-opacity=".4" stroke-width="4"/>
+  <text x="985" y="650" fill="#ddd6be" font-family="Arial,sans-serif" font-size="78" font-weight="700" letter-spacing="12">OG</text>
+  <path fill="#fff" opacity=".07" filter="url(#grain)" d="M0 0h1800v1100H0z"/>
+</svg>

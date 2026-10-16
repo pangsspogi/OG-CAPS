@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 1100">
+  <defs><linearGradient id="b" x2="0" y2="1"><stop stop-color="#77776c"/><stop offset="1" stop-color="#252623"/></linearGradient><linearGradient id="c" x2=".6" y2="1"><stop stop-color="#343631"/><stop offset="1" stop-color="#10110f"/></linearGradient></defs>
+  <path fill="url(#b)" d="M0 0h800v1100H0z"/><path fill="#bdb9a9" opacity=".1" d="M0 130h800v210H0z"/>
+  <path fill="#191a17" d="M0 815h800v285H0z"/><ellipse cx="425" cy="790" rx="240" ry="35" fill="#111" opacity=".45"/>
+  <path fill="url(#c)" d="M195 699c32-185 195-287 365-238 90 26 143 91 162 174l-53 101-474-3z"/>
+  <path fill="#171815" d="M193 760c138-54 318-36 440 1 65 20 87 44 65 66-39 38-184 25-318-3-129-26-204-48-187-64z"/>
+  <path fill="none" stroke="#858579" stroke-opacity=".45" stroke-width="4" d="M282 663c38-98 134-157 239-149"/>
+  <text x="369" y="656" fill="#c8c6b9" font-family="Arial,sans-serif" font-size="34" font-weight="700">OG</text>
+</svg>

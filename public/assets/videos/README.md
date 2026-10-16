@@ -1,0 +1,1 @@
+The first supplied video is installed as `hero-campaign.mp4` and plays muted in a loop in the homepage hero. The newer upload is installed as `collection-film.mp4` and plays in the lower editorial section. Both use poster/image fallbacks and are hidden for visitors who prefer reduced motion. Replace either with original or properly licensed, web-optimized footage when ready.

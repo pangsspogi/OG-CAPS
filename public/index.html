@@ -1,0 +1,150 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#f5f4f1" />
+    <meta name="description" content="OG CAPS — headwear for the originals. Discover fitted, vintage-inspired and everyday caps." />
+    <title>OG CAPS — Built for the OGs</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Oswald:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="/css/global.css" />
+    <script type="module" src="/js/app.js"></script>
+  </head>
+  <body>
+    <a class="skip-link" href="#main">Skip to content</a>
+    <header class="site-header">
+      <button class="icon-button menu-toggle" type="button" aria-label="Open navigation" aria-expanded="false" aria-controls="siteNav">
+        <span class="menu-lines" aria-hidden="true"></span>
+      </button>
+      <nav class="site-nav" id="siteNav" aria-label="Main navigation">
+        <a href="/collections/new-arrivals">New arrivals</a>
+        <a href="/collections/fitted-caps">Fitted caps</a>
+        <a href="/collections/vintage-caps">Vintage caps</a>
+        <a href="/collections/accessories">Accessories</a>
+        <a href="/collections">Discover</a>
+      </nav>
+      <a class="wordmark" href="/" aria-label="OG CAPS home">OG<span>.</span>CAPS</a>
+      <div class="header-actions">
+        <button class="text-button search-open" type="button" aria-label="Open search">Search</button>
+        <a class="text-button account-link" href="/account">Account</a>
+        <a class="text-button bag-link" href="/cart">Bag <span class="bag-count" aria-label="0 items">0</span></a>
+      </div>
+    </header>
+
+    <main id="main">
+      <section class="hero" aria-labelledby="heroTitle">
+        <video class="hero-video" autoplay muted loop playsinline poster="/assets/images/campaigns/hero-poster.svg" aria-hidden="true">
+          <source src="/assets/videos/hero-campaign.mp4" type="video/mp4" />
+        </video>
+        <div class="hero-shade"></div>
+        <div class="hero-copy">
+          <p class="eyebrow hero-eyebrow">Independent headwear · Est. for the originals</p>
+          <h1 id="heroTitle">BUILT FOR<br />THE <span>OGs.</span></h1>
+          <p class="hero-description">A different kind of uniform. Made to be worn your way.</p>
+          <div class="hero-actions">
+            <a class="button button-light" href="/collections/new-arrivals">Shop new arrivals <span aria-hidden="true">↗</span></a>
+            <a class="button button-outline-light" href="/collections">Explore collections <span aria-hidden="true">↗</span></a>
+          </div>
+        </div>
+        <p class="hero-index">01 / 04 <span>—</span> THE EVERYDAY ORIGINAL</p>
+        <a class="hero-scroll" href="#collections">Scroll to explore <span aria-hidden="true">↓</span></a>
+        <span class="hero-credit">OG CAPS / CAMPAIGN 001</span>
+      </section>
+
+      <section class="intro section-wrap" aria-label="Brand introduction">
+        <p class="eyebrow">Not just a cap.</p>
+        <p class="intro-line">The finishing touch<br />to <em>your</em> uniform.</p>
+        <p class="intro-aside">Built around the details.<br />Worn beyond the rules.</p>
+      </section>
+
+      <section class="categories section-wrap" id="collections">
+        <div class="section-heading">
+          <div><p class="eyebrow">Find your fit</p><h2>THE ROTATION</h2></div>
+          <a class="underlined-link" href="/collections">View all collections <span aria-hidden="true">↗</span></a>
+        </div>
+        <div class="category-grid" id="categoryGrid" aria-live="polite">
+          <a class="category-card category-card--new" href="/collections/new-arrivals">
+            <span class="category-number">01</span><span class="category-label">New arrivals</span><span class="category-arrow" aria-hidden="true">↗</span>
+          </a>
+          <a class="category-card category-card--fitted" href="/collections/fitted-caps">
+            <span class="category-number">02</span><span class="category-label">Fitted caps</span><span class="category-arrow" aria-hidden="true">↗</span>
+          </a>
+          <a class="category-card category-card--vintage" href="/collections/vintage-caps">
+            <span class="category-number">03</span><span class="category-label">Vintage caps</span><span class="category-arrow" aria-hidden="true">↗</span>
+          </a>
+          <a class="category-card category-card--accessories" href="/collections/accessories">
+            <span class="category-number">04</span><span class="category-label">Accessories</span><span class="category-arrow" aria-hidden="true">↗</span>
+          </a>
+        </div>
+      </section>
+
+      <section class="featured-section">
+        <div class="section-wrap">
+          <div class="section-heading">
+            <div><p class="eyebrow">Just landed</p><h2>IN THE ROTATION</h2></div>
+            <a class="underlined-link" href="/collections/new-arrivals">Shop new arrivals <span aria-hidden="true">↗</span></a>
+          </div>
+          <div class="product-grid product-grid--featured" id="featuredProducts" aria-live="polite">
+            <p class="notice">Loading the latest from the collection…</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="manifesto">
+        <div class="manifesto-image">
+          <video class="manifesto-video" autoplay muted loop playsinline preload="metadata" poster="/assets/images/products/new-arrival-lookbook.jpg" aria-hidden="true">
+            <source src="/assets/videos/collection-film.mp4" type="video/mp4" />
+          </video>
+        </div>
+        <div class="manifesto-copy">
+          <p class="eyebrow">The OG point of view</p>
+          <h2>OWN<br />YOUR<br /><em>ANGLE.</em></h2>
+          <p>No uniform required. Just the one you make your own.</p>
+          <a class="underlined-link" href="/collections">Find your next cap <span aria-hidden="true">↗</span></a>
+        </div>
+        <span class="manifesto-mark">OG / 001</span>
+      </section>
+
+      <section class="newsletter section-wrap" id="newsletter">
+        <p class="eyebrow">Stay in the loop</p>
+        <h2>GOOD THINGS<br />ARE COMING.</h2>
+        <p>New drops, restocks and notes from the OG CAPS world.</p>
+        <form class="newsletter-form" id="newsletterForm">
+          <label class="visually-hidden" for="newsletterEmail">Email address</label>
+          <input id="newsletterEmail" type="email" placeholder="Your email address" autocomplete="email" required />
+          <button type="submit" aria-label="Join the mailing list">Join <span aria-hidden="true">↗</span></button>
+        </form>
+        <p class="form-message" id="newsletterMessage" role="status"></p>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <div class="footer-brand">
+        <a class="wordmark wordmark-footer" href="/">OG<span>.</span>CAPS</a>
+        <p>Caps for the OGs.</p>
+      </div>
+      <div class="footer-contact" aria-label="Contact OG CAPS">
+        <a href="mailto:panganx80@gmail.com">panganx80@gmail.com</a>
+        <a href="https://www.facebook.com/Panganx/" target="_blank" rel="noopener noreferrer">Facebook <span aria-hidden="true">↗</span></a>
+      </div>
+      <nav class="footer-links" aria-label="Footer navigation"><a href="/collections">Shop all</a><a href="/account">Account</a><a href="/#newsletter">Stay in the loop</a></nav>
+      <small>© <span id="year"></span> OG CAPS. All rights reserved.</small>
+    </footer>
+
+    <dialog class="search-dialog" aria-labelledby="searchTitle">
+      <form method="dialog"><button class="dialog-close" aria-label="Close search">×</button></form>
+      <p class="eyebrow" id="searchTitle">Find your next favourite</p>
+      <form class="search-form" id="searchForm">
+        <label class="visually-hidden" for="searchInput">Search products</label>
+        <input id="searchInput" type="search" placeholder="Search caps, colours, collections…" autocomplete="off" />
+        <button type="submit" aria-label="Search">↗</button>
+      </form>
+      <div class="search-results" id="searchResults" aria-live="polite"></div>
+    </dialog>
+
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+    <div id="routeView" hidden></div>
+  </body>
+</html>
