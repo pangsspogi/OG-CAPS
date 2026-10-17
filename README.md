@@ -16,6 +16,20 @@ Express and PostgreSQL/Prisma backend for the OG CAPS storefront. Express serves
 
 For deployment, use `npm run db:deploy` against an already provisioned PostgreSQL database, then `npm start`. Never use development migration commands against production.
 
+## Vercel demo deployment
+
+This project supports Vercel's Express runtime through the default Express app export in `src/app.js`. Import the `OG-CAPS` GitHub repository into Vercel and use the Express framework preset (or let Vercel detect it). Set the build command to `npm run db:generate`.
+
+Vercel does not provide this project with a PostgreSQL database automatically. Create a PostgreSQL database with a provider such as Neon, then add these Vercel project environment variables:
+
+- `DATABASE_URL`: the provider's PostgreSQL connection string (use its pooled connection URL when available).
+- `ADMIN_EMAIL` and `ADMIN_PASSWORD`: configure both together; use at least 12 characters for production.
+- `PHP_PER_USD`: optional; defaults to `57.5`.
+
+Vercel's deployment and project production domains are added to the API's CORS allowlist automatically, and proxy trust defaults to one hop on Vercel. If you use a custom domain, add its full `https://` origin to `CORS_ORIGINS`. After adding environment variables, apply the existing production migrations and sample-only catalog once using `npm run db:deploy` and `npm run db:seed` against the Vercel database. Run these production commands from a trusted environment configured with the same database/admin variables; never run `db:migrate` against production.
+
+To keep product photo uploads across deployments, create and connect a **public Vercel Blob** store to the project for Production and Preview. Vercel then provides Blob authentication automatically. Without a connected Blob store, the site and API run but the photo upload endpoint returns an explicit setup error. Local and Render deployments continue saving uploads to `public/assets/images/products/uploads/`.
+
 ## Render demo deployment
 
 The repository includes a Render Blueprint in `render.yaml`. To create the free demo:
@@ -53,7 +67,7 @@ The seed creates visible but non-purchasable sample-only catalog rows in the fro
 - Replace the original SVG campaign poster at `public/assets/images/campaigns/hero-poster.svg`, or update the `poster` attribute in `public/index.html` and matching CSS background URL in `public/css/global.css`.
 - The supplied videos are installed as `public/assets/videos/hero-campaign.mp4` (homepage hero) and `public/assets/videos/collection-film.mp4` (editorial section). Replace them with original or licensed campaign footage when ready; the browser uses local image fallbacks when videos are missing or unavailable.
 - Replace the original SVG category illustrations under `public/assets/images/categories/` with licensed OG CAPS photography.
-- The supplied sample images are installed under `public/assets/images/products/` and assigned to sample catalog products. Admins can upload JPEG, PNG, or WebP product photos (up to 5 MB) on the Products page; uploaded originals are stored under `public/assets/images/products/uploads/` and automatically used as the product image. Alternatively, set `imageUrl` to a same-origin `/assets/...` path or HTTPS URL using the admin API. With no product photo the storefront shows a neutral cap placeholder. Uploaded files use the app's local filesystem, so configure persistent media storage before deploying to an ephemeral host such as Render.
+- The supplied sample images are installed under `public/assets/images/products/` and assigned to sample catalog products. Admins can upload JPEG, PNG, or WebP product photos (up to 5 MB) on the Products page; local and Render uploads are stored under `public/assets/images/products/uploads/`, while Vercel uploads use the connected public Blob store. Alternatively, set `imageUrl` to a same-origin `/assets/...` path or HTTPS URL using the admin API. With no product photo the storefront shows a neutral cap placeholder. The local/Render upload directory is ephemeral on hosts that do not provide persistent disks.
 
 In Stripe, configure a webhook URL of `https://<your-host>/api/v1/payments/webhook` for `checkout.session.completed`, `checkout.session.expired`, `checkout.session.async_payment_succeeded`, and `checkout.session.async_payment_failed`; place the endpoint signing secret in `STRIPE_WEBHOOK_SECRET`. Set `STRIPE_SECRET_KEY` and keep the signing secret private. Checkout requires both Stripe values and returns a service-unavailable response if missing. `successUrl`/`cancelUrl` must use an origin listed in `CORS_ORIGINS`; use fixed storefront return URLs.
 

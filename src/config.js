@@ -20,7 +20,9 @@ const envSchema = z.object({
     (value) => !value || ['http:', 'https:'].includes(new URL(value).protocol),
     { message: 'RENDER_EXTERNAL_URL must use http or https' },
   ),
-  TRUST_PROXY: z.coerce.number().int().min(0).default(0),
+  VERCEL_URL: z.string().regex(/^(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z]{2,}$/i).optional(),
+  VERCEL_PROJECT_PRODUCTION_URL: z.string().regex(/^(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z]{2,}$/i).optional(),
+  TRUST_PROXY: z.coerce.number().int().min(0).default(process.env.VERCEL === '1' ? 1 : 0),
   STRIPE_SECRET_KEY: z.string().default(''),
   STRIPE_WEBHOOK_SECRET: z.string().default(''),
   ADMIN_EMAIL: z.string().email().optional(),
@@ -53,5 +55,8 @@ export const config = {
   CORS_ORIGINS: [...new Set([
     ...parsed.data.CORS_ORIGINS,
     ...(parsed.data.RENDER_EXTERNAL_URL ? [new URL(parsed.data.RENDER_EXTERNAL_URL).origin] : []),
+    ...[parsed.data.VERCEL_URL, parsed.data.VERCEL_PROJECT_PRODUCTION_URL]
+      .filter(Boolean)
+      .map((hostname) => new URL(`https://${hostname}`).origin),
   ])],
 };

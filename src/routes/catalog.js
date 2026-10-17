@@ -5,6 +5,7 @@ import { mkdir, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import multer from 'multer';
+import { put } from '@vercel/blob';
 import { prisma } from '../db.js';
 import { HttpError, asyncHandler } from '../errors.js';
 import { requireAdmin, requireAuth } from '../middleware/auth.js';
@@ -172,6 +173,18 @@ router.post('/admin/product-images', requireAuth, requireAdmin, receiveProductIm
   if (!req.file) throw new HttpError(400, 'Choose a product image to upload');
   const extension = getProductImageExtension(req.file.mimetype, req.file.buffer);
   if (!extension) throw new HttpError(400, 'The uploaded file is not a valid JPEG, PNG, or WebP image');
+
+  if (process.env.VERCEL === '1') {
+    if (!process.env.BLOB_READ_WRITE_TOKEN
+      && !(process.env.BLOB_STORE_ID && process.env.VERCEL_OIDC_TOKEN)) {
+      throw new HttpError(503, 'Connect a Vercel Blob store to enable product image uploads');
+    }
+    const blob = await put(`${randomUUID()}.${extension}`, req.file.buffer, {
+      access: 'public',
+      contentType: req.file.mimetype,
+    });
+    return res.status(201).json({ imageUrl: blob.url });
+  }
 
   await mkdir(productImageDirectory, { recursive: true });
   const filename = `${randomUUID()}.${extension}`;
