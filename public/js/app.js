@@ -1,5 +1,13 @@
+import { convertMinorAmount } from './currency.js';
+
 const API_BASE = '/api/v1';
 const CART_KEY = 'ogcaps-guest-cart';
+const CURRENCY_KEY = 'ogcaps-display-currency';
+const supportedCurrencies = ['PHP', 'USD'];
+let displayCurrency = supportedCurrencies.includes(localStorage.getItem(CURRENCY_KEY))
+  ? localStorage.getItem(CURRENCY_KEY)
+  : 'PHP';
+let phpPerUsd = null;
 const COLLECTIONS = {
   'new-arrivals': { name: 'New Arrivals', description: 'Fresh into the rotation. Meet the latest from OG CAPS.' },
   'fitted-caps': { name: 'Fitted Caps', description: 'A closer fit, finished with the details that matter.' },
@@ -28,12 +36,47 @@ function escapeHtml(value = '') {
 function formatMoney(amount, currency = 'USD') {
   const numeric = Number(amount);
   if (!Number.isFinite(numeric)) return 'Price unavailable';
-  const value = numeric / 100;
+  const baseCurrency = currency.toUpperCase();
+  let displayAmount;
   try {
-    return new Intl.NumberFormat(undefined, { style: 'currency', currency }).format(value);
-  } catch {
-    return `${currency} ${value.toFixed(2)}`;
+    displayAmount = phpPerUsd === null
+      ? (baseCurrency === 'USD' ? numeric : null)
+      : convertMinorAmount(Math.round(numeric), baseCurrency, displayCurrency, phpPerUsd);
+  } catch (error) {
+    console.error('Could not convert product price', error);
+    return 'Price unavailable';
   }
+  if (displayAmount === null) return 'Price unavailable';
+  try {
+    return new Intl.NumberFormat(displayCurrency === 'PHP' ? 'en-PH' : 'en-US', {
+      style: 'currency',
+      currency: displayCurrency,
+    }).format(displayAmount / 100);
+  } catch {
+    return `${displayCurrency} ${(displayAmount / 100).toFixed(2)}`;
+  }
+}
+
+function displayPriceAmount(usdCents, currency) {
+  const cents = convertMinorAmount(Math.round(usdCents), 'USD', currency, phpPerUsd);
+  return (cents / 100).toFixed(2);
+}
+
+function inputPriceToUsdCents(amount, currency) {
+  const numeric = Number(amount);
+  if (!Number.isFinite(numeric) || numeric < 0 || !Number.isSafeInteger(Math.round(numeric * 100))) {
+    throw new Error('Enter a valid product price.');
+  }
+  return convertMinorAmount(Math.round(numeric * 100), currency, 'USD', phpPerUsd);
+}
+
+function updateCurrencyToggle() {
+  const button = $('#currencyToggle');
+  button.textContent = displayCurrency === 'PHP' ? 'PHP ₱' : 'USD $';
+  button.setAttribute('aria-label', `Switch currency to ${displayCurrency === 'PHP' ? 'US dollars' : 'Philippine pesos'}`);
+  button.title = phpPerUsd === null
+    ? 'Currency conversion is unavailable'
+    : `Peso display uses ₱${phpPerUsd.toFixed(2)} per US$1`;
 }
 
 function unwrap(body) {
@@ -44,13 +87,14 @@ function unwrap(body) {
 async function api(path, options = {}) {
   const csrfToken = document.cookie.split('; ').find((entry) => entry.startsWith('ogcaps_csrf='))?.split('=').slice(1).join('=');
   const method = (options.method || 'GET').toUpperCase();
+  const isFormData = typeof FormData !== 'undefined' && options.body instanceof FormData;
   const csrfHeader = ['POST', 'PUT', 'PATCH', 'DELETE'].includes(method) && csrfToken
     ? { 'x-csrf-token': decodeURIComponent(csrfToken) }
     : {};
   const response = await fetch(`${API_BASE}${path}`, {
     credentials: 'same-origin',
     ...options,
-    headers: { Accept: 'application/json', ...(options.body ? { 'Content-Type': 'application/json' } : {}), ...csrfHeader, ...options.headers }
+    headers: { Accept: 'application/json', ...(options.body && !isFormData ? { 'Content-Type': 'application/json' } : {}), ...csrfHeader, ...options.headers }
   });
   const body = await response.json().catch(() => ({}));
   if (!response.ok) {
@@ -58,6 +102,49 @@ async function api(path, options = {}) {
     throw new Error(message);
   }
   return unwrap(body);
+}
+
+function collectionOptions(collections, selectedId = '') {
+  return `<option value="">No collection</option>${collections.map((collection) => `<option value="${escapeHtml(collection.id)}" ${collection.id === selectedId ? 'selected' : ''}>${escapeHtml(collection.name)}</option>`).join('')}`;
+}
+
+function productImageField(product = {}) {
+  const imageUrl = product.imageUrl || '';
+  const name = product.name || 'Product';
+  return `<label>Upload product photo (JPEG, PNG, or WebP; max 5 MB)<input type="file" name="imageFile" accept="image/jpeg,image/png,image/webp" /></label><img class="admin-image-preview" data-image-preview src="${escapeHtml(imageUrl)}" alt="${escapeHtml(`${name} preview`)}" ${imageUrl ? '' : 'hidden'} /><label>Or image URL / path<input name="imageUrl" type="text" value="${escapeHtml(imageUrl)}" placeholder="https://… or /assets/… (optional if you upload a photo)" /></label>`;
+}
+
+function productPriceField(product = {}) {
+  const amount = product.priceCents === undefined ? '' : displayPriceAmount(product.priceCents, 'PHP');
+  const maxAmount = (phpPerUsd * 1000000).toFixed(2);
+  return `<label data-price-label>Price amount (PHP)<input name="priceAmount" type="number" min="0" max="${maxAmount}" step="0.01" value="${amount}" required /></label><label>Enter price in<select name="priceCurrency" data-price-currency><option value="PHP" selected>Philippine peso (PHP ₱)</option><option value="USD">US dollar (USD $)</option></select></label>`;
+}
+
+function productFormMarkup(product = {}, collections = [], editing = false) {
+  return `<label>Name<input name="name" value="${escapeHtml(product.name || '')}" required maxlength="160" /></label><label>URL slug<input name="slug" value="${escapeHtml(product.slug || '')}" required pattern="[a-z0-9]+(?:-[a-z0-9]+)*" placeholder="classic-black-cap" /></label><label>Description<textarea name="description" maxlength="5000" rows="4">${escapeHtml(product.description || '')}</textarea></label><label>Color<input name="color" value="${escapeHtml(product.color || '')}" maxlength="60" placeholder="Black" /></label>${productImageField(product)}${productPriceField(product)}<label>Stock quantity<input name="stock" type="number" min="0" max="1000000" step="1" value="${Number(product.stock || 0)}" required /></label><label>Collection<select name="collectionId">${collectionOptions(collections, product.collectionId || '')}</select></label><label class="checkbox-field"><input name="active" type="checkbox" ${product.active === false ? '' : 'checked'} /> Active on storefront</label><label class="checkbox-field"><input name="featured" type="checkbox" ${product.featured ? 'checked' : ''} /> Feature on homepage</label><button class="solid-button">${editing ? 'Save changes' : 'Create product'}</button>`;
+}
+
+async function productFormData(form) {
+  const formData = new FormData(form);
+  const data = Object.fromEntries(formData);
+  const imageFile = formData.get('imageFile');
+  delete data.imageFile;
+  data.priceCents = inputPriceToUsdCents(data.priceAmount, data.priceCurrency);
+  delete data.priceAmount;
+  delete data.priceCurrency;
+  data.stock = Number(data.stock);
+  data.featured = formData.get('featured') === 'on';
+  data.active = formData.get('active') === 'on';
+  data.color = data.color.trim() || null;
+  data.imageUrl = data.imageUrl.trim() || null;
+  if (!data.collectionId) delete data.collectionId;
+  if (imageFile instanceof File && imageFile.size > 0) {
+    const upload = new FormData();
+    upload.append('image', imageFile);
+    const result = await api('/admin/product-images', { method: 'POST', body: upload });
+    data.imageUrl = result.imageUrl;
+  }
+  return data;
 }
 
 function readGuestCart() {
@@ -178,8 +265,8 @@ async function renderCollection(slug) {
     <div class="collection-toolbar"><span id="collectionCount">Loading products…</span><div class="collection-controls"><label for="sortSelect">Sort</label><select id="sortSelect" aria-label="Sort products"><option value="featured">Featured</option><option value="newest">Newest</option><option value="price_asc">Price: low to high</option><option value="price_desc">Price: high to low</option><option value="name_asc">Name: A to Z</option></select></div></div>
     <div class="filter-row">
       <label>Color <select id="colorFilter"><option value="">All colors</option></select></label>
-      <label>Min price <input id="minPrice" type="number" min="0" step="0.01" inputmode="decimal" placeholder="0" /></label>
-      <label>Max price <input id="maxPrice" type="number" min="0" step="0.01" inputmode="decimal" placeholder="Any" /></label>
+      <label>Min price (${displayCurrency}) <input id="minPrice" type="number" min="0" step="0.01" inputmode="decimal" placeholder="0" /></label>
+      <label>Max price (${displayCurrency}) <input id="maxPrice" type="number" min="0" step="0.01" inputmode="decimal" placeholder="Any" /></label>
       <label><input id="availableFilter" type="checkbox" /> In stock</label>
     </div>
     <div class="product-grid" id="collectionProducts" aria-live="polite">${renderNotice('Loading products…')}</div>
@@ -194,16 +281,16 @@ async function renderCollection(slug) {
   const available = $('#availableFilter', routeView);
   sortSelect.value = params.get('sort') || 'featured';
   colorSelect.value = params.get('color') || '';
-  minPrice.value = params.get('minPrice') ? (Number(params.get('minPrice')) / 100).toFixed(2) : '';
-  maxPrice.value = params.get('maxPrice') ? (Number(params.get('maxPrice')) / 100).toFixed(2) : '';
+  minPrice.value = params.get('minPrice') ? displayPriceAmount(Number(params.get('minPrice')), displayCurrency) : '';
+  maxPrice.value = params.get('maxPrice') ? displayPriceAmount(Number(params.get('maxPrice')), displayCurrency) : '';
   available.checked = params.get('inStock') === 'true';
   const productContainer = $('#collectionProducts', routeView);
   const fetchProducts = async () => {
     const query = new URLSearchParams();
     query.set('sort', sortSelect.value);
     if (colorSelect.value) query.set('color', colorSelect.value);
-    if (minPrice.value) query.set('minPrice', String(Math.round(Number(minPrice.value) * 100)));
-    if (maxPrice.value) query.set('maxPrice', String(Math.round(Number(maxPrice.value) * 100)));
+    if (minPrice.value) query.set('minPrice', String(inputPriceToUsdCents(minPrice.value, displayCurrency)));
+    if (maxPrice.value) query.set('maxPrice', String(inputPriceToUsdCents(maxPrice.value, displayCurrency)));
     if (available.checked) query.set('inStock', 'true');
     if (params.get('search')) query.set('search', params.get('search'));
     history.replaceState({}, '', `${location.pathname}${query.size ? `?${query}` : ''}`);
@@ -360,7 +447,7 @@ async function renderCart() {
       return `<article class="cart-row" data-product-id="${escapeHtml(item.productId)}" data-variant-id="${escapeHtml(item.variantId || '')}"><div class="cart-image">${imageMarkup(image, name)}</div><div><h3>${escapeHtml(name)}</h3>${item.variantLabel ? `<p>${escapeHtml(item.variantLabel)}</p>` : ''}<p>${formatMoney(amount, currency)}</p><label class="visually-hidden" for="qty-${escapeHtml(item.productId)}-${escapeHtml(item.variantId || 'default')}">Quantity for ${escapeHtml(name)}</label><input id="qty-${escapeHtml(item.productId)}-${escapeHtml(item.variantId || 'default')}" data-quantity type="number" min="1" max="99" value="${Number(item.quantity)}" /><button type="button" data-remove>Remove</button></div><strong>${formatMoney(item.lineTotalCents, currency)}</strong></article>`;
     }).join('');
     const subtotal = cartResult.totalCents;
-    content.outerHTML = `<div id="cartContent">${lines}<div class="cart-summary"><div class="summary-line"><span>Subtotal</span><strong>${formatMoney(subtotal, cartResult.currency || 'usd')}</strong></div><div class="summary-line"><span>Shipping and tax</span><span>Calculated at checkout</span></div><label for="checkoutEmail">Email for order updates</label><input id="checkoutEmail" type="email" autocomplete="email" required /><button class="solid-button" id="checkoutButton">Proceed to checkout</button><p class="product-meta" id="cartFeedback" role="status"></p></div></div>`;
+    content.outerHTML = `<div id="cartContent">${lines}<div class="cart-summary"><div class="summary-line"><span>Subtotal</span><strong>${formatMoney(subtotal, cartResult.currency || 'usd')}</strong></div><div class="summary-line"><span>Shipping and tax</span><span>Calculated at checkout</span></div>${displayCurrency === 'PHP' ? `<p class="product-meta">Peso prices are estimates converted at ₱${phpPerUsd.toFixed(2)} per US$1. Checkout is charged in USD.</p>` : ''}<label for="checkoutEmail">Email for order updates</label><input id="checkoutEmail" type="email" autocomplete="email" required /><button class="solid-button" id="checkoutButton">Proceed to checkout</button><p class="product-meta" id="cartFeedback" role="status"></p></div></div>`;
     $('#cartContent', routeView).addEventListener('change', async (event) => {
       const row = event.target.closest('[data-product-id]');
       if (!row || !event.target.matches('[data-quantity]')) return;
@@ -473,36 +560,60 @@ async function renderAdmin(path) {
   const content = $('#adminContent', routeView);
   try {
     if (path.endsWith('/products')) {
-      const result = await api('/admin/products');
+      const [result, collectionResult] = await Promise.all([
+        api('/admin/products'),
+        api('/collections'),
+      ]);
       const products = Array.isArray(result) ? result : (result.products || []);
-      content.innerHTML = `<h2>Products</h2><form class="admin-form" id="productForm"><label>Name<input name="name" required /></label><label>Slug<input name="slug" required /></label><label>Description<textarea name="description"></textarea></label><label>Color<input name="color" /></label><label>Image path or HTTPS URL<input name="imageUrl" placeholder="/assets/images/products/cap.jpg" /></label><label>Price (minor currency units)<input name="priceCents" type="number" min="0" required /></label><label>Stock<input name="stock" type="number" min="0" required /></label><label>Collection ID<input name="collectionId" /></label><label class="checkbox-field"><input name="featured" type="checkbox" /> Featured</label><button class="solid-button">Create product</button></form><table class="admin-table"><thead><tr><th>Name</th><th>Slug</th><th>Price</th><th>Status</th><th>Actions</th></tr></thead><tbody>${products.map((product) => `<tr><td>${escapeHtml(product.name)}</td><td>${escapeHtml(product.slug)}</td><td>${formatMoney(product.priceCents, product.currency || 'usd')}</td><td>${product.active ? 'Active' : 'Archived'}</td><td><details><summary>Edit</summary><form class="admin-form" data-edit-product="${escapeHtml(product.id)}"><label>Name<input name="name" value="${escapeHtml(product.name)}" required /></label><label>Slug<input name="slug" value="${escapeHtml(product.slug)}" required /></label><label>Description<textarea name="description">${escapeHtml(product.description || '')}</textarea></label><label>Color<input name="color" value="${escapeHtml(product.color || '')}" /></label><label>Image path or HTTPS URL<input name="imageUrl" value="${escapeHtml(product.imageUrl || '')}" /></label><label>Price (minor currency units)<input name="priceCents" type="number" min="0" value="${Number(product.priceCents)}" required /></label><label>Stock<input name="stock" type="number" min="0" value="${Number(product.stock || 0)}" required /></label><label class="checkbox-field"><input name="featured" type="checkbox" ${product.featured ? 'checked' : ''} /> Featured</label><button class="solid-button">Save changes</button></form><button class="text-button" type="button" data-archive-product="${escapeHtml(product.id)}">Archive</button></details></td></tr>`).join('')}</tbody></table>`;
+      const collections = Array.isArray(collectionResult) ? collectionResult : (collectionResult.collections || []);
+          const productRows = products.map((product) => `<tr><td>${escapeHtml(product.name)}</td><td>${escapeHtml(product.slug)}</td><td>${formatMoney(product.priceCents, product.currency || 'usd')}</td><td>${product.active ? 'Active' : 'Archived'}</td><td><details><summary>Edit</summary><form class="admin-form" data-edit-product="${escapeHtml(product.id)}" data-price-currency="PHP">${productFormMarkup(product, collections, true)}</form><button class="text-button" type="button" data-archive-product="${escapeHtml(product.id)}">Archive</button></details></td></tr>`).join('');
+          content.innerHTML = `<h2>Products</h2><p class="page-description">Prices can be entered in Philippine pesos or US dollars. Peso storefront prices are converted from the USD catalog price.</p><form class="admin-form" id="productForm" data-price-currency="PHP">${productFormMarkup({}, collections)}</form><table class="admin-table"><thead><tr><th>Name</th><th>Slug</th><th>Price</th><th>Status</th><th>Actions</th></tr></thead><tbody>${productRows}</tbody></table>`;
       $('#productForm', routeView).addEventListener('submit', async (event) => {
         event.preventDefault();
         try {
-          const data = Object.fromEntries(new FormData(event.currentTarget));
-          data.priceCents = Number(data.priceCents);
-          data.stock = Number(data.stock);
-          data.featured = new FormData(event.currentTarget).get('featured') === 'on';
-          data.color = data.color.trim() || null;
-          data.imageUrl = data.imageUrl.trim() || null;
-          if (!data.collectionId) delete data.collectionId;
+          const data = await productFormData(event.currentTarget);
           await api('/admin/products', { method: 'POST', body: JSON.stringify(data) });
           showToast('Product created.');
           renderAdmin(path);
         }
         catch (error) { showToast(error.message); }
       });
+      content.addEventListener('change', (event) => {
+        const form = event.target.closest('#productForm, [data-edit-product]');
+        if (!form) return;
+        if (event.target.matches('[data-price-currency]')) {
+          const previousCurrency = form.dataset.priceCurrency;
+          const nextCurrency = event.target.value;
+          const amount = Number($('[name="priceAmount"]', form).value);
+          if (Number.isFinite(amount) && amount >= 0) {
+            const cents = Math.round(amount * 100);
+            const convertedCents = convertMinorAmount(cents, previousCurrency, nextCurrency, phpPerUsd);
+            $('[name="priceAmount"]', form).value = (convertedCents / 100).toFixed(2);
+          }
+          form.dataset.priceCurrency = nextCurrency;
+          $('[name="priceAmount"]', form).max = (nextCurrency === 'PHP' ? phpPerUsd * 1000000 : 1000000).toFixed(2);
+          $('[data-price-label]', form).firstChild.textContent = `Price amount (${nextCurrency})`;
+          return;
+        }
+        const preview = $('[data-image-preview]', form);
+        if (event.target.matches('input[name="imageFile"]') && event.target.files[0]) {
+          const reader = new FileReader();
+          reader.addEventListener('load', () => {
+            preview.src = reader.result;
+            preview.hidden = false;
+          }, { once: true });
+          reader.readAsDataURL(event.target.files[0]);
+        } else if (event.target.matches('input[name="imageUrl"]')) {
+          preview.src = event.target.value;
+          preview.hidden = !event.target.value;
+        }
+      });
       content.addEventListener('submit', async (event) => {
         const form = event.target.closest('[data-edit-product]');
         if (!form) return;
         event.preventDefault();
-        const data = Object.fromEntries(new FormData(form));
-        data.priceCents = Number(data.priceCents);
-        data.stock = Number(data.stock);
-        data.featured = new FormData(form).get('featured') === 'on';
-        data.color = data.color.trim() || null;
-        data.imageUrl = data.imageUrl.trim() || null;
         try {
+          const data = await productFormData(form);
           await api(`/admin/products/${encodeURIComponent(form.dataset.editProduct)}`, { method: 'PATCH', body: JSON.stringify(data) });
           showToast('Product updated.');
           renderAdmin(path);
@@ -678,5 +789,30 @@ document.querySelectorAll('.hero-video, .manifesto-video').forEach((video) => {
   video.addEventListener('stalled', () => video.classList.add('video-unavailable'));
 });
 
-refreshBagCount();
-router().then(scrollToLocationHash);
+$('#currencyToggle').addEventListener('click', async () => {
+  displayCurrency = displayCurrency === 'PHP' ? 'USD' : 'PHP';
+  localStorage.setItem(CURRENCY_KEY, displayCurrency);
+  updateCurrencyToggle();
+  await router().then(scrollToLocationHash);
+});
+
+async function initializeStorefront() {
+  try {
+    const storeConfig = await api('/store-config');
+    const rate = Number(storeConfig.PHP_PER_USD);
+    if (!Number.isFinite(rate) || rate <= 0) throw new Error('The configured PHP/USD exchange rate is invalid.');
+    phpPerUsd = rate;
+    $('#currencyToggle').disabled = false;
+  } catch (error) {
+    console.error('Could not load storefront currency settings', error);
+    displayCurrency = 'USD';
+    localStorage.setItem(CURRENCY_KEY, displayCurrency);
+    $('#currencyToggle').disabled = true;
+    showToast('Currency settings could not be loaded. Prices remain in USD.');
+  }
+  updateCurrencyToggle();
+  refreshBagCount();
+  await router().then(scrollToLocationHash);
+}
+
+initializeStorefront();

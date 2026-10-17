@@ -1,13 +1,43 @@
 import { Router } from 'express';
 import { z } from 'zod';
+import { randomUUID } from 'node:crypto';
+import { mkdir, writeFile } from 'node:fs/promises';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import multer from 'multer';
 import { prisma } from '../db.js';
 import { HttpError, asyncHandler } from '../errors.js';
 import { requireAdmin, requireAuth } from '../middleware/auth.js';
 import { validate } from '../middleware/validate.js';
 import { withProductImages } from '../services/catalog.js';
-import { productImageUrlSchema } from '../services/product-image.js';
+import { getProductImageExtension, productImageUrlSchema } from '../services/product-image.js';
 
 const router = Router();
+const productImageDirectory = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../public/assets/images/products/uploads');
+const uploadProductImage = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 5 * 1024 * 1024, files: 1, fields: 0 },
+  fileFilter(_req, file, callback) {
+    if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.mimetype)) {
+      return callback(new HttpError(400, 'Choose a JPEG, PNG, or WebP image'));
+    }
+    return callback(null, true);
+  },
+}).single('image');
+
+function receiveProductImage(req, res, next) {
+  uploadProductImage(req, res, (error) => {
+    if (!error) return next();
+    if (error instanceof multer.MulterError) {
+      const status = error.code === 'LIMIT_FILE_SIZE' ? 413 : 400;
+      return next(new HttpError(status, error.code === 'LIMIT_FILE_SIZE'
+        ? 'Product images must be 5 MB or smaller'
+        : 'Upload one product image at a time'));
+    }
+    return next(error);
+  });
+}
+
 const slugSchema = z.string().trim().min(1).max(100).regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/);
 const productSchema = z.object({
   slug: slugSchema,
@@ -136,6 +166,17 @@ router.get('/collections/:slug', asyncHandler(async (req, res) => {
   if (!collection) throw new HttpError(404, 'Collection not found');
   collection.products = collection.products.map(withProductImages);
   res.json({ collection });
+}));
+
+router.post('/admin/product-images', requireAuth, requireAdmin, receiveProductImage, asyncHandler(async (req, res) => {
+  if (!req.file) throw new HttpError(400, 'Choose a product image to upload');
+  const extension = getProductImageExtension(req.file.mimetype, req.file.buffer);
+  if (!extension) throw new HttpError(400, 'The uploaded file is not a valid JPEG, PNG, or WebP image');
+
+  await mkdir(productImageDirectory, { recursive: true });
+  const filename = `${randomUUID()}.${extension}`;
+  await writeFile(path.join(productImageDirectory, filename), req.file.buffer, { flag: 'wx' });
+  res.status(201).json({ imageUrl: `/assets/images/products/uploads/${filename}` });
 }));
 
 router.post('/admin/products', requireAuth, requireAdmin, validate(productSchema), asyncHandler(async (req, res) => {

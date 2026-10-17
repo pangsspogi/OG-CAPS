@@ -56,6 +56,7 @@ app.use('/api', loadSession);
 
 for (const prefix of ['/api/v1', '/api']) {
   app.use(prefix, csrfProtection);
+  app.get(`${prefix}/store-config`, (req, res) => res.json({ PHP_PER_USD: config.PHP_PER_USD }));
   app.get(`${prefix}/health`, (req, res) => res.json({ status: 'ok' }));
   app.use(`${prefix}/auth`, authLimiter, authRoutes);
   app.use(prefix, catalogRoutes);

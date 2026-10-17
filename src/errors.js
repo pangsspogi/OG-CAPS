@@ -19,6 +19,9 @@ export function errorHandler(error, req, res, next) {
   if (error?.type === 'entity.too.large') {
     return res.status(413).json({ error: 'Request body is too large' });
   }
+  if (error?.code === 'LIMIT_FILE_SIZE') {
+    return res.status(413).json({ error: 'Product images must be 5 MB or smaller' });
+  }
   if (error?.type === 'entity.parse.failed') {
     return res.status(400).json({ error: 'Malformed JSON request body' });
   }

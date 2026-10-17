@@ -36,6 +36,7 @@ img, video { max-width: 100%; }
 .wordmark { position: absolute; left: 50%; transform: translateX(-50%); font-family: var(--display); font-size: 26px; line-height: 1; letter-spacing: -.035em; font-weight: 600; white-space: nowrap; }
 .wordmark span { color: #829e19; }
 .header-actions { justify-content: flex-end; gap: clamp(14px, 2vw, 30px); }
+.currency-toggle { font-variant-numeric: tabular-nums; }
 .bag-count { display: inline-grid; place-items: center; min-width: 17px; height: 17px; margin-left: 4px; border: 1px solid currentColor; border-radius: 50%; font-size: 9px; letter-spacing: 0; }
 .icon-button, .menu-toggle { display: none; }
 
@@ -205,7 +206,10 @@ img, video { max-width: 100%; }
 .admin-table th, .admin-table td { padding: 13px 8px; border-bottom: 1px solid var(--line); text-align: left; }
 .admin-form { max-width: 600px; margin: 30px 0; }
 .admin-form label { display: block; margin: 12px 0; font-size: 10px; }
-.admin-form input, .admin-form textarea { display: block; width: 100%; margin-top: 6px; padding: 10px; border: 1px solid var(--line); background: transparent; }
+.admin-form input, .admin-form textarea, .admin-form select { display: block; width: 100%; margin-top: 6px; padding: 10px; border: 1px solid var(--line); background: transparent; }
+.admin-form input[type="file"] { padding: 8px; }
+.admin-image-preview { display: block; width: 160px; max-height: 160px; margin-top: 10px; object-fit: contain; }
+.admin-image-preview[hidden] { display: none; }
 .admin-form .checkbox-field { display: flex; align-items: center; gap: 8px; }
 .admin-form .checkbox-field input { display: inline-block; width: auto; margin: 0; }
 

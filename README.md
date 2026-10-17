@@ -8,7 +8,7 @@ Express and PostgreSQL/Prisma backend for the OG CAPS storefront. Express serves
 - PostgreSQL
 - A Stripe account and webhook endpoint for real checkout
 
-1. Copy `.env.example` to `.env`; set `DATABASE_URL` and choose `SESSION_TTL_DAYS` (1–30, default 7). Configure `ADMIN_EMAIL` and a strong `ADMIN_PASSWORD` together if an administrator account should be seeded.
+1. Copy `.env.example` to `.env`; set `DATABASE_URL`, choose `PHP_PER_USD` (default 57.5 pesos per US dollar), and choose `SESSION_TTL_DAYS` (1–30, default 7). Configure `ADMIN_EMAIL` and `ADMIN_PASSWORD` together if an administrator account should be seeded. Local development requires at least 8 password characters; production requires at least 12.
 2. Install dependencies: `npm install`
 3. Generate Prisma client and create the development database schema: `npm run db:generate` then `npm run db:migrate`
 4. Add clearly labeled sample-only products and collections: `npm run db:seed`
@@ -29,6 +29,7 @@ This is a temporary demo, not production hosting: Render's free web service can 
 ## API overview
 
 - Canonical API prefix: `/api/v1` (`/api` aliases remain available)
+- `GET /api/v1/store-config` exposes the configured PHP-per-USD display conversion rate
 - `GET /api/v1/health`
 - `GET /api/v1/products?q=black&page=1&limit=24&sort=featured&minPrice=1000&maxPrice=5000&color=black&inStock=true` (`sort` also accepts `newest`, `oldest`, `price_asc`, `price_desc`, `name_asc`, and `name_desc`)
 - `GET /api/v1/products/:slug`
@@ -39,11 +40,11 @@ This is a temporary demo, not production hosting: Render's free web service can 
 - `POST /api/v1/cart/validate` with `{ "items": [{ "productId": "...", "quantity": 1 }] }`
 - `POST /api/v1/orders/checkout` with `items`, `email`, `successUrl`, and `cancelUrl`; returns `orderId` and Stripe `checkoutUrl`
 - `GET /api/v1/orders` and `GET /api/v1/orders/:id` return only the signed-in account's orders
-- Administrator-cookie-protected: `GET /api/v1/admin/products`, `GET /api/v1/admin/orders`, `GET /api/v1/admin/inventory`, `PATCH /api/v1/admin/orders/:id/fulfillment` with `{ "fulfillmentStatus": "PROCESSING" | "FULFILLED" | "UNFULFILLED" }`, and `PATCH /api/v1/admin/inventory/:productId` with `{ "stock": 0 }`
+- Administrator-cookie-protected: `GET /api/v1/admin/products`, `POST /api/v1/admin/product-images` (multipart field `image`, JPEG/PNG/WebP up to 5 MB), `GET /api/v1/admin/orders`, `GET /api/v1/admin/inventory`, `PATCH /api/v1/admin/orders/:id/fulfillment` with `{ "fulfillmentStatus": "PROCESSING" | "FULFILLED" | "UNFULFILLED" }`, and `PATCH /api/v1/admin/inventory/:productId` with `{ "stock": 0 }`
 - Admin catalog writes: `POST /api/v1/admin/products`, `PATCH/DELETE /api/v1/admin/products/:id`, and `POST /api/v1/admin/collections`; products can be marked featured for the homepage and featured sort order
 - `POST /api/v1/payments/webhook` is reserved for Stripe's signed webhook delivery
 
-The guest cart is client-held in local storage, not a server-side cart record. Its contents are untrusted: validation and checkout accept product IDs and quantities only; the server reloads active products, checks stock, and calculates prices from the database. Currency is currently USD only. Checkout reserves stock transactionally before creating a Stripe session; a session-creation error restores the reservation. Paid orders are marked paid only from a verified Stripe event whose session reports `payment_status: paid`. Event IDs are stored uniquely for webhook idempotency. Expired or failed async payments release inventory once.
+The guest cart is client-held in local storage, not a server-side cart record. Its contents are untrusted: validation and checkout accept product IDs and quantities only; the server reloads active products, checks stock, and calculates prices from the database. Product prices are stored in USD for checkout. The storefront lets shoppers switch between USD and estimated PHP display prices, and administrators can enter prices in either currency; PHP amounts are converted using `PHP_PER_USD` (default 57.5). Keep that configured rate up to date. Checkout and Stripe charges remain USD. Checkout reserves stock transactionally before creating a Stripe session; a session-creation error restores the reservation. Paid orders are marked paid only from a verified Stripe event whose session reports `payment_status: paid`. Event IDs are stored uniquely for webhook idempotency. Expired or failed async payments release inventory once.
 
 The seed creates visible but non-purchasable sample-only catalog rows in the frontend's `new-arrivals`, `fitted-caps`, `vintage-caps`, and `accessories` collections. Their prices and stock counts are placeholders, not real stock or offers; do not use seeded inventory as an actual availability statement.
 
@@ -52,7 +53,7 @@ The seed creates visible but non-purchasable sample-only catalog rows in the fro
 - Replace the original SVG campaign poster at `public/assets/images/campaigns/hero-poster.svg`, or update the `poster` attribute in `public/index.html` and matching CSS background URL in `public/css/global.css`.
 - The supplied videos are installed as `public/assets/videos/hero-campaign.mp4` (homepage hero) and `public/assets/videos/collection-film.mp4` (editorial section). Replace them with original or licensed campaign footage when ready; the browser uses local image fallbacks when videos are missing or unavailable.
 - Replace the original SVG category illustrations under `public/assets/images/categories/` with licensed OG CAPS photography.
-- The supplied sample images are installed under `public/assets/images/products/` and assigned to sample catalog products. Add product photography under that folder, then set each product's `imageUrl` to a same-origin `/assets/...` path using the admin API or seed data. With no product photo the storefront shows a neutral cap placeholder.
+- The supplied sample images are installed under `public/assets/images/products/` and assigned to sample catalog products. Admins can upload JPEG, PNG, or WebP product photos (up to 5 MB) on the Products page; uploaded originals are stored under `public/assets/images/products/uploads/` and automatically used as the product image. Alternatively, set `imageUrl` to a same-origin `/assets/...` path or HTTPS URL using the admin API. With no product photo the storefront shows a neutral cap placeholder. Uploaded files use the app's local filesystem, so configure persistent media storage before deploying to an ephemeral host such as Render.
 
 In Stripe, configure a webhook URL of `https://<your-host>/api/v1/payments/webhook` for `checkout.session.completed`, `checkout.session.expired`, `checkout.session.async_payment_succeeded`, and `checkout.session.async_payment_failed`; place the endpoint signing secret in `STRIPE_WEBHOOK_SECRET`. Set `STRIPE_SECRET_KEY` and keep the signing secret private. Checkout requires both Stripe values and returns a service-unavailable response if missing. `successUrl`/`cancelUrl` must use an origin listed in `CORS_ORIGINS`; use fixed storefront return URLs.
 

@@ -13,6 +13,7 @@ const envSchema = z.object({
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
   PORT: z.coerce.number().int().min(1).max(65535).default(3000),
   DATABASE_URL: z.string().url(),
+  PHP_PER_USD: z.coerce.number().finite().min(1).max(1000).default(57.5),
   SESSION_TTL_DAYS: z.coerce.number().int().min(1).max(30).default(7),
   CORS_ORIGINS: originsSchema,
   RENDER_EXTERNAL_URL: z.string().url().optional().refine(
@@ -23,13 +24,20 @@ const envSchema = z.object({
   STRIPE_SECRET_KEY: z.string().default(''),
   STRIPE_WEBHOOK_SECRET: z.string().default(''),
   ADMIN_EMAIL: z.string().email().optional(),
-  ADMIN_PASSWORD: z.string().min(12).optional(),
+  ADMIN_PASSWORD: z.string().min(8).optional(),
 }).superRefine((env, ctx) => {
   if (Boolean(env.ADMIN_EMAIL) !== Boolean(env.ADMIN_PASSWORD)) {
     ctx.addIssue({
       code: z.ZodIssueCode.custom,
       message: 'ADMIN_EMAIL and ADMIN_PASSWORD must be configured together',
       path: ['ADMIN_EMAIL'],
+    });
+  }
+  if (env.NODE_ENV === 'production' && env.ADMIN_PASSWORD && env.ADMIN_PASSWORD.length < 12) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: 'ADMIN_PASSWORD must be at least 12 characters in production',
+      path: ['ADMIN_PASSWORD'],
     });
   }
 });
